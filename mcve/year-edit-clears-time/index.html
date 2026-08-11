@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Inputmask MCVE — typing into the year clears the rest</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 46rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        line-height: 1.5;
+      }
+      input {
+        font-family: monospace;
+        font-size: 1.25rem;
+        padding: 0.3rem 0.5rem;
+      }
+      code {
+        background: #f2f2f2;
+        padding: 0 0.2rem;
+      }
+      .bad {
+        color: #a00;
+      }
+      .good {
+        color: #070;
+      }
+      section {
+        margin-bottom: 2.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Typing into the year clears every segment to its right</h1>
+
+    <p>
+      Alias <code>datetime</code>, default options. Loads the
+      <code>dist/inputmask.js</code> of this checkout.
+    </p>
+
+    <section>
+      <h2>1. Time is lost</h2>
+      <p>
+        <label>dd.MM.yyyy HH:mm <input id="a" size="20" /></label>
+      </p>
+      <ol>
+        <li>
+          Click the field and type <code>030820261430</code> — it reads
+          <code>03.08.2026 14:30</code>.
+        </li>
+        <li>
+          Click between the second <code>.</code> and the <code>2</code> of the
+          year, then type <code>1</code>.
+        </li>
+      </ol>
+      <p>
+        <strong>Expected</strong> <code class="good">03.08.1yyy 14:30</code> —
+        only the year is being edited.<br />
+        <strong>Actual</strong> <code class="bad">03.08.1yyy HH:mm</code>
+      </p>
+      <p>
+        Selecting the year by double click first makes no difference: typing
+        <code>1999</code> ends at <code class="bad">03.08.1999 HH:mm</code>.
+      </p>
+    </section>
+
+    <section>
+      <h2>2. With the year in front, the whole rest of the date is lost</h2>
+      <p>
+        <label>yyyy-MM-dd <input id="b" size="20" /></label>
+      </p>
+      <ol>
+        <li>Type <code>20260803</code> — it reads <code>2026-08-03</code>.</li>
+        <li>Put the caret at the very start and type <code>1</code>.</li>
+      </ol>
+      <p>
+        <strong>Expected</strong> <code class="good">1yyy-08-03</code><br />
+        <strong>Actual</strong> <code class="bad">1yyy-MM-dd</code>
+      </p>
+    </section>
+
+    <section>
+      <h2>3. Counter-check — every other segment behaves</h2>
+      <p>
+        <label>dd.MM.yyyy HH:mm <input id="c" size="20" /></label>
+      </p>
+      <p>
+        Type <code>030820261430</code>, then double click the
+        <strong>month</strong> and type <code>12</code>. Result
+        <code class="good">03.12.2026 14:30</code> — the time survives.
+      </p>
+    </section>
+
+    <p>
+      See <code>README.md</code> next to this file for the block responsible and
+      for a script that measures two fix candidates against it.
+    </p>
+
+    <script src="../../dist/inputmask.js"></script>
+    <script>
+      Inputmask("datetime", { inputFormat: "dd.MM.yyyy HH:mm" }).mask(
+        document.getElementById("a")
+      );
+      Inputmask("datetime", { inputFormat: "yyyy-MM-dd" }).mask(
+        document.getElementById("b")
+      );
+      Inputmask("datetime", { inputFormat: "dd.MM.yyyy HH:mm" }).mask(
+        document.getElementById("c")
+      );
+    </script>
+  </body>
+</html>

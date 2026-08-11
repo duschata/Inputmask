@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Open this MCVE in CodePen / JSFiddle</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 52rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        line-height: 1.5;
+      }
+      button {
+        font: inherit;
+        padding: 0.6rem 1.2rem;
+        margin-right: 0.5rem;
+        cursor: pointer;
+      }
+      input[type="text"] {
+        font: inherit;
+        padding: 0.3rem 0.5rem;
+      }
+      pre {
+        background: #f4f4f4;
+        padding: 0.8rem;
+        overflow-x: auto;
+        font-size: 0.85rem;
+      }
+      code {
+        background: #f2f2f2;
+        padding: 0 0.2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Open this MCVE in CodePen / JSFiddle</h1>
+
+    <p>
+      The issue template of this project asks for a codepen or jsfiddle link.
+      Open this file in a browser and press a button: it posts the reproduction
+      to that service's prefill API, which opens a pre-filled editor in a new
+      tab. Save it there and use the link.
+    </p>
+    <p>
+      Unlike <code>index.html</code> next to this file, the playground loads
+      Inputmask from a CDN rather than from <code>dist/</code> — so it
+      demonstrates a published release, not this checkout. The
+      <code>&lt;script src&gt;</code> is part of the transferred HTML on
+      purpose: an editor's &ldquo;external resources&rdquo; setting is easy to
+      overlook, and anyone reading the pen should see which build is under test.
+    </p>
+
+    <p>
+      <label>
+        Inputmask version from the CDN:
+        <input type="text" id="version" value="5.1.0-beta.17" size="16" />
+      </label>
+      <br /><small
+        >5.1.0-beta.17 is the current development state and the build this
+        report is against. <code>5.0.10</code> is the latest stable release,
+        <code>5.0.7</code> the first affected one, <code>5.0.6</code> the last
+        one without the defect.</small
+      >
+    </p>
+
+    <p>
+      <button id="codepen">Open in CodePen</button>
+      <button id="jsfiddle">Open in JSFiddle</button>
+    </p>
+    <p>
+      <small
+        >CodePen needs a (free) account to save, JSFiddle does not. If a prefill
+        API ever stops accepting the post, copy the two blocks below into the
+        editor by hand — they are self-contained, no external-resource setting
+        needed.</small
+      >
+    </p>
+
+    <h2>What gets transferred</h2>
+    <p>HTML:</p>
+    <pre id="showHtml"></pre>
+    <p>JS:</p>
+    <pre id="showJs"></pre>
+
+    <script>
+      const htmlFor = (
+        version
+      ) => `<script src="https://cdn.jsdelivr.net/npm/inputmask@${version}/dist/inputmask.js"><\/script>
+
+<p>Inputmask ${version}, <code>datetime</code> alias. Typing into the year
+replaces everything behind it with the mask template.</p>
+
+<h3>1. The time is lost</h3>
+<ol>
+  <li>Click the field and type <code>030820261430</code> &rarr; <code>03.08.2026 14:30</code></li>
+  <li>Put the caret in front of the year (between the second dot and the 2) and type <code>1</code></li>
+</ol>
+<p>Expected <code>03.08.1yyy 14:30</code> &mdash; actual <code>03.08.1yyy HH:mm</code>.</p>
+<p><label>dd.MM.yyyy HH:mm <input id="a" size="20" /></label></p>
+
+<h3>2. With the year in front, month and day are lost</h3>
+<p>Type <code>20260803</code>, put the caret at the very start, type <code>1</code>.<br />
+Expected <code>1yyy-08-03</code> &mdash; actual <code>1yyy-MM-dd</code>.</p>
+<p><label>yyyy-MM-dd <input id="b" size="20" /></label></p>
+
+<h3>3. A two digit year behaves the same</h3>
+<p>Type <code>0308261430</code>, caret in front of the year, type <code>9</code>.<br />
+Expected <code>03.08.9y 14:30</code> &mdash; actual <code>03.08.9y HH:mm</code>.
+So it is not about the width of the token.</p>
+<p><label>dd.MM.yy HH:mm <input id="c" size="20" /></label></p>
+
+<h3>4. Counter-check &mdash; every other segment is fine</h3>
+<p>Type <code>030820261430</code>, double click the <b>month</b>, type <code>12</code>.<br />
+Result <code>03.12.2026 14:30</code> &mdash; the time survives.</p>
+<p><label>dd.MM.yyyy HH:mm <input id="d" size="20" /></label></p>`;
+
+      const JS = `Inputmask("datetime", { inputFormat: "dd.MM.yyyy HH:mm" }).mask(document.getElementById("a"));
+Inputmask("datetime", { inputFormat: "yyyy-MM-dd" }).mask(document.getElementById("b"));
+Inputmask("datetime", { inputFormat: "dd.MM.yy HH:mm" }).mask(document.getElementById("c"));
+Inputmask("datetime", { inputFormat: "dd.MM.yyyy HH:mm" }).mask(document.getElementById("d"));`;
+
+      const CSS = `body { font-family: system-ui, sans-serif; line-height: 1.5; padding: 1rem; }
+input { font-family: monospace; font-size: 1.1rem; padding: .3rem .5rem; }
+h3 { margin-top: 1.6rem; }`;
+
+      const TITLE =
+        "Inputmask datetime alias: typing in the year clears every segment behind it";
+
+      const version = () => document.getElementById("version").value.trim();
+
+      document.getElementById("showHtml").textContent = htmlFor("<version>");
+      document.getElementById("showJs").textContent = JS;
+
+      /** Builds a throwaway form, posts it to the target in a new tab, removes it again. */
+      function post(action, fields) {
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = action;
+        form.target = "_blank";
+        for (const [name, value] of Object.entries(fields)) {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = name;
+          input.value = value;
+          form.appendChild(input);
+        }
+        document.body.appendChild(form);
+        form.submit();
+        form.remove();
+      }
+
+      document.getElementById("codepen").addEventListener("click", () => {
+        post("https://codepen.io/pen/define", {
+          data: JSON.stringify({
+            title: TITLE,
+            html: htmlFor(version()),
+            js: JS,
+            css: CSS,
+            editors: "1011"
+          })
+        });
+      });
+
+      document.getElementById("jsfiddle").addEventListener("click", () => {
+        post("https://jsfiddle.net/api/post/library/pure/", {
+          title: TITLE,
+          html: htmlFor(version()),
+          js: JS,
+          css: CSS,
+          wrap: "l"
+        });
+      });
+    </script>
+  </body>
+</html>
